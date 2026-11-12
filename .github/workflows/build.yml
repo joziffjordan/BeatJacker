@@ -1,0 +1,42 @@
+name: Build Beat Jacker
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            name: macOS
+          - os: windows-latest
+            name: Windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Engine self-test
+        run: cmake --build build --config Release --target engine_test
+      - name: Collect (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir out
+          cp -R "build/BeatJacker_artefacts/Release/VST3/Beat Jacker.vst3" out/
+          cp -R "build/BeatJacker_artefacts/Release/AU/Beat Jacker.component" out/
+          cp -R "build/BeatJacker_artefacts/Release/Standalone/Beat Jacker.app" out/
+      - name: Collect (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir out
+          cp -R "build/BeatJacker_artefacts/Release/VST3/Beat Jacker.vst3" out/
+          cp -R build/BeatJacker_artefacts/Release/Standalone/*.exe out/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BeatJacker-${{ matrix.name }}
+          path: out
